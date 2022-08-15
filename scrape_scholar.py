@@ -1,25 +1,39 @@
 #!/Library/Frameworks/Python.framework/Versions/3.7/bin/python3
+import time
 from contextlib import closing
-from selenium.webdriver import Firefox
+from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from bs4 import BeautifulSoup
 
-page_url = "https://scholar.google.com/citations?user=r9m5qwkAAAAJ&hl=en&oi=ao#d=gs_md_cita-d&u=%2Fcitations%3Fview_op%3Dview_citation%26hl%3Den%26user%3Dr9m5qwkAAAAJ%26citation_for_view%3Dr9m5qwkAAAAJ%3Au5HHmVD_uO8C%26tzom%3D300"
-target_id = 'aep-abstract-sec-id8'
-target_class = 'gsh_csp'
 
-with closing(Firefox()) as browser:
+page_url = 'https://scholar.google.com/'
+
+search_term = input('Enter search term:')
+related_terms = list()
+
+with webdriver.Firefox() as browser:
 	browser.get(page_url)
-	element_present = EC.presence_of_element_located((By.CLASS_NAME, target_class))
-	try:
-		WebDriverWait(browser, timeout=10).until(element_present)
-	except TimeoutException:
-		print("TIMEOUT")
+	search_bar = browser.find_element(By.NAME, 'q')
+	for i in search_term:
+		search_bar.send_keys(i)
+		time.sleep(1)
+		try:
+			ul= browser.find_element(By.XPATH, "//input[@name='q']//following-sibling::*//ul")
+			for li in ul.find_elements(By.TAG_NAME, 'li'):
+				new_term = li.text.strip()
+				related_terms.append(new_term)
+				print(new_term)
+
+		except Exception as e:
+			print(e)
 
 	page_source = browser.page_source
 
-abstract = BeautifulSoup(page_source, "html.parser").find_all('div', class_=target_class)
-print(abstract)
+related_terms = set(related_terms)
+with(open('%s.txt'%(search_term.replace(' ','_')), 'w')) as f:
+	for related_term in related_terms:
+		f.write(related_term+'\n')
+
